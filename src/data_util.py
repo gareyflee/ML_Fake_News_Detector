@@ -74,3 +74,6 @@ def plot_accs(x_axis, train_acc, val_acc, plt_title="", x_title="Epochs", y_titl
     else:
         plt.show()
     plt.close()
+
+
+#glglglg

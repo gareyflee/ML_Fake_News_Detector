@@ -20,8 +20,7 @@ class Data:
             X_train, X_val, X_test - split data from X (default sizes in function argument)
             y_train, y_val, y_test - corresponding labels
             y_oh - one hot encoded matrix for "bias" and "fact" labels
-    
-    
+            y_oh_train, y_oh_val, y_oh_test - corresponding one-hot encoded labels
     '''
     def __init__(self, corpus_filename):
         self.labels = {}
@@ -38,6 +37,7 @@ class Data:
         self.split_train_test_val()
 
     def read_data(self, corpus_filename):
+        # Most of this code was taken from the original SVM paper
         data = pd.read_csv(corpus_filename)
         self.sources = data.source_url_processed
         X = np.empty(data.shape[0]).reshape(-1, 1)
@@ -61,10 +61,10 @@ class Data:
         self.y_oh = {}
         label_encoder = LabelEncoder()
         onehot_encoder = OneHotEncoder(sparse=False)
-        for key in self.y.keys():
-            integer_encoded = label_encoder.fit_transform(self.y[key])\
-                .reshape(len(integer_encoded), 1)
-            y_oh[key] = onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+        for key in self.y.keys():           
+            integer_encoded = self.y[key].reshape(len(self.y[key]), 1)
+            self.y_oh[key] = onehot_encoder.fit_transform(integer_encoded)
+            # self.y_oh[key] = onehot_encoder.fit_transform(integer_encoded)
 
 
 
@@ -107,6 +107,7 @@ class Data:
             self.X = self.X[rand_idxs]
             for key in self.y.keys():
                 self.y[key] = self.y[key][rand_idxs]
+                self.y_oh[key] = self.y_oh[key][rand_idxs, :]
             return None
         else:
             assert y is not None, "Error, Either supply no arguments or both data and labels."

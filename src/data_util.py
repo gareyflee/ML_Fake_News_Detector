@@ -6,11 +6,23 @@ import codecs
 import argparse
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 # This file should contain all data processing functions
 
 DATA_DIR = "../News-Media-Reliability/data/"
 corpus_filename = DATA_DIR + "corpus.csv"
 class Data:
+    '''
+        Members:
+            X - Design matrix with features of size nxd
+            y - dictionary with keys "bias" and "fact" containing labels each with size nx1
+            X_train, X_val, X_test - split data from X (default sizes in function argument)
+            y_train, y_val, y_test - corresponding labels
+            y_oh - one hot encoded matrix for "bias" and "fact" labels
+    
+    
+    '''
     def __init__(self, corpus_filename):
         self.labels = {}
         self.labels['fact'] = {'low': 0, 'mixed': 1, 'high': 2}
@@ -21,8 +33,9 @@ class Data:
         print("Data loaded. \n\tFeatures Shape: ", self.X.shape, \
             "\n\tBias Labels Shape: ", self.y["bias"].shape, \
             "\n\tFactuality Labels Shape: ", self.y["fact"].shape)
+        
+        self.one_hot_encoding()
         self.split_train_test_val()
-
 
     def read_data(self, corpus_filename):
         data = pd.read_csv(corpus_filename)
@@ -44,6 +57,16 @@ class Data:
         y["fact"] = np.array([self.labels["fact"][L.lower()] for L in y_fact])
         return X, y
 
+    def one_hot_encoding(self):
+        self.y_oh = {}
+        label_encoder = LabelEncoder()
+        onehot_encoder = OneHotEncoder(sparse=False)
+        for key in self.y.keys():
+            integer_encoded = label_encoder.fit_transform(self.y[key])\
+                .reshape(len(integer_encoded), 1)
+            y_oh[key] = onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+
+
 
     def split_train_test_val(self, val_percent = 0.2, test_percent = 0.15):
         # Split all data into training and testing
@@ -55,18 +78,24 @@ class Data:
 
         self.shuffle()
         # Split the feature data
-        self.x_train = self.X[:train_len, :]
-        self.x_val = self.X[train_len:train_len + val_len, :]
-        self.x_test = self.X[train_len + val_len:, :]
+        self.X_train = self.X[:train_len, :]
+        self.X_val = self.X[train_len:train_len + val_len, :]
+        self.X_test = self.X[train_len + val_len:, :]
 
         # Split the label data
         self.y_train = {}
         self.y_test = {}
         self.y_val = {}
+        self.y_oh_train = {}
+        self.y_oh_test = {}
+        self.y_oh_val = {}
         for key in self.y.keys():
             self.y_train[key] = self.y[key][:train_len]
             self.y_val[key] = self.y[key][train_len:train_len + val_len]
             self.y_test[key] = self.y[key][train_len + val_len:]
+            self.y_oh_train[key] = self.y_oh[key][:train_len, :]
+            self.y_oh_val[key] = self.y_oh[key][train_len:train_len + val_len, :]
+            self.y_oh_test[key] = self.y_oh[key][train_len + val_len:, :]
 
     def shuffle(self, X=None, y=None):
         # Shuffle the entire data set

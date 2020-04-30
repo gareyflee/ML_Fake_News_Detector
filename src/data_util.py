@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 import pandas as pd
 # This file should contain all data processing functions
-temp_features = ["body", "title"]
+
 DATA_DIR = "../News-Media-Reliability/data/"
 class Data:
     def __init__(self, corpus_filename):
@@ -53,8 +53,6 @@ class Data:
 
         self.shuffle()
         # Split the feature data
-        print(self.X.shape)
-        print(train_len, test_len, val_len)
         self.x_train = self.X[:train_len, :]
         self.x_val = self.X[train_len:train_len + val_len, :]
         self.x_test = self.X[train_len + val_len:, :]
@@ -64,9 +62,9 @@ class Data:
         self.y_test = {}
         self.y_val = {}
         for key in self.y.keys():
-            self.y_train = self.y[key][:train_len]
-            self.y_val = self.y[key][train_len:train_len + val_len]
-            self.y_test = self.y[key][train_len + val_len:]
+            self.y_train[key] = self.y[key][:train_len]
+            self.y_val[key] = self.y[key][train_len:train_len + val_len]
+            self.y_test[key] = self.y[key][train_len + val_len:]
 
     def shuffle(self, X=None, y=None):
         # Shuffle the entire data set
@@ -108,6 +106,7 @@ def main():
 
     corpus_filename = DATA_DIR + "corpus.csv"
     data_obj = Data(corpus_filename)
+    print(data_obj.y_train["bias"])
 
 if __name__ == "__main__":
     main()

@@ -9,6 +9,7 @@ import pandas as pd
 # This file should contain all data processing functions
 
 DATA_DIR = "../News-Media-Reliability/data/"
+corpus_filename = DATA_DIR + "corpus.csv"
 class Data:
     def __init__(self, corpus_filename):
         self.labels = {}
@@ -42,6 +43,7 @@ class Data:
         y_fact = data["fact"]
         y["fact"] = np.array([self.labels["fact"][L.lower()] for L in y_fact])
         return X, y
+
 
     def split_train_test_val(self, val_percent = 0.2, test_percent = 0.15):
         # Split all data into training and testing
@@ -100,13 +102,3 @@ def plot_accs(x_axis, train_acc, val_acc, plt_title="", x_title="Epochs", y_titl
     else:
         plt.show()
     plt.close()
-
-def main():
-
-
-    corpus_filename = DATA_DIR + "corpus.csv"
-    data_obj = Data(corpus_filename)
-    print(data_obj.y_train["bias"])
-
-if __name__ == "__main__":
-    main()

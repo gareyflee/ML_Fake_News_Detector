@@ -22,6 +22,7 @@ class Data:
             "\n\tBias Labels Shape: ", self.y["bias"].shape, \
             "\n\tFactuality Labels Shape: ", self.y["fact"].shape)
         
+        
 
     def read_data(self, corpus_filename):
         data = pd.read_csv(corpus_filename)

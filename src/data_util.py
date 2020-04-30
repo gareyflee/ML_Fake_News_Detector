@@ -16,13 +16,12 @@ class Data:
         self.labels['bias'] = {'extreme-right': 0, 'right': 1, 'right-center': 2, \
             'center': 3, 'left-center': 4, 'left': 5, 'extreme-left': 6}
         
-       
         self.X, self.y = self.read_data(corpus_filename)
         print("Data loaded. \n\tFeatures Shape: ", self.X.shape, \
             "\n\tBias Labels Shape: ", self.y["bias"].shape, \
             "\n\tFactuality Labels Shape: ", self.y["fact"].shape)
-        
-        
+        self.split_train_test_val()
+
 
     def read_data(self, corpus_filename):
         data = pd.read_csv(corpus_filename)
@@ -37,7 +36,6 @@ class Data:
                 X = np.hstack([X, feats[:, :-2]])
             else:
                 print(feature_file + " is not of type .npy, skipping.")
-        X = pd.DataFrame(X)
         y = {}
         y_bias = data["bias"]
         y["bias"] = np.array([self.labels["bias"][L.lower()] for L in y_bias])
@@ -45,28 +43,30 @@ class Data:
         y["fact"] = np.array([self.labels["fact"][L.lower()] for L in y_fact])
         return X, y
 
-    def split_train_test(self, train_len=None):
+    def split_train_test_val(self, val_percent = 0.2, test_percent = 0.15):
         # Split all data into training and testing
         # If train len is not given, self.train_len param from constructor is used
-        if train_len is None:
-            train_len = self.train_len
+        assert val_percent + test_percent < 1.0, "Error, percents are too high."
+        train_len = int(self.X.shape[0] * (1.0 - val_percent - test_percent))
+        test_len = int(self.X.shape[0] * test_percent)
+        val_len = int(self.X.shape[0] * val_percent)
+
         self.shuffle()
+        # Split the feature data
+        print(self.X.shape)
+        print(train_len, test_len, val_len)
         self.x_train = self.X[:train_len, :]
-        self.x_val = self.X[train_len:, :]
-        self.y_train = self.y[:train_len]
-        self.y_val = self.y[train_len:]
+        self.x_val = self.X[train_len:train_len + val_len, :]
+        self.x_test = self.X[train_len + val_len:, :]
 
-    def get_features_and_labels(corpus, features, task):
-        # This function was taken from original model in classification.py
-        data = pd.read_csv("data/corpus.csv")
-        sources = data.source_url_processed
-        X = np.empty(data.shape[0]).reshape(-1, 1)
-
-    def split_k(self, k):
-        # Split data into k sets and save them as their own members of the class
-        self.shuffle()
-        self.x_k = np.array_split(self.X, k)
-        self.y_k = np.array_split(self.y, k)
+        # Split the label data
+        self.y_train = {}
+        self.y_test = {}
+        self.y_val = {}
+        for key in self.y.keys():
+            self.y_train = self.y[key][:train_len]
+            self.y_val = self.y[key][train_len:train_len + val_len]
+            self.y_test = self.y[key][train_len + val_len:]
 
     def shuffle(self, X=None, y=None):
         # Shuffle the entire data set
@@ -74,24 +74,16 @@ class Data:
         # otherwise the given X and y are shuffled and returned
         if X is None:
             assert y is None, "Error, Either supply no arguments or both data and labels."
-            rand_idxs = np.random.permutation(self.y.shape[0])
+            rand_idxs = np.random.permutation(self.y['fact'].shape[0])
             self.X = self.X[rand_idxs]
-            self.y = self.y[rand_idxs]
+            for key in self.y.keys():
+                self.y[key] = self.y[key][rand_idxs]
             return None
         else:
             assert y is not None, "Error, Either supply no arguments or both data and labels."
-            rand_idxs = np.random.permutation(y.shape[0])
+            rand_idxs = np.random.permutation(y['bias'].shape[0])
             return X[rand_idxs], y[rand_idxs]
             
-    def normalize(self, X=None, order=2):
-        # Normalize data matrix
-        # If no argument for matrix is gen, all data in class is shuffled, 
-        # otherwise the shuffled array is returned
-        if X is None:
-            self.X = (self.X.T / np.linalg.norm(self.X, ord=order, axis=1)).T
-            return None
-        else:
-            return (X.T / np.linalg.norm(X, ord=order, axis=1)).T
 
 def plot_accs(x_axis, train_acc, val_acc, plt_title="", x_title="Epochs", y_title="Accuracies", x_axis_log=False, save=False):
     assert len(x_axis) == len(train_acc) == len(val_acc), "Error, x-axis and accuracies must be same length."
@@ -111,33 +103,9 @@ def plot_accs(x_axis, train_acc, val_acc, plt_title="", x_title="Epochs", y_titl
         plt.show()
     plt.close()
 
-def parse_params():
-    """
-    Summary of the different tasks:
-    -------------------------------
-    fact:       {low, mixed, high}
-    bias:       {extreme-right, right, center-right, center, center-left, left, extreme-left}
-    bias3way:   {{extreme-right, right}, {center-right, center, center-left}, {left, extreme-left}}
-    ===============================================================================================
-    Summary of features from the different sources:
-    -----------------------------------------------
-    traffic:    alexa
-    url:        handcrafted_url
-    twitter:    has_twitter, created_at, verified, location, url_match, counts, description
-    wikipedia:  has_wiki, wikicontent, wikisummary, wikitoc, wikicategories
-    articles:   body, title
-    =======================================================================================
-    """
-    parser = argparse.ArgumentParser(description='Source Reliability')
-    parser.add_argument('--corpus',             type=str, default='MBFC_v2')
-    parser.add_argument('--task',               type=str, default='bias')
-    parser.add_argument('--features',           type=str, default='body+title') # list of features must be separated by "+" sign
-    params = parser.parse_args()
-    return params
-
 def main():
 
-    user_params = parse_params()
+
     corpus_filename = DATA_DIR + "corpus.csv"
     data_obj = Data(corpus_filename)
 

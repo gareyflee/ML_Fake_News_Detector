@@ -5,57 +5,81 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix  
 import numpy as np
 import sys
+import json
+import re
 
 class Classifier():
-    def __init__(self, clf_function, data, params, param_search_grid=None):
+    model_types = ["fact", "bias"]
+    def __init__(self, clf_function, data, params, param_search_grid=None, name=""):
         self.data = data
         self.params = params
         self.best_params = None
         self.param_search_grid = param_search_grid
         self.clf_func = clf_function
+        self.name = name
+        
     
-    def create(self, classifier_function):
+    def create(self):
+        print("\n----------- Building {} Classifiers -----------".format(self.name))
+        params = {}
         if self.best_params is not None:
-            params_fact = self.best_params["fact"]
-            params_bias = self.best_params["bias"]
+            print("Building {} models with parameters found in grid search.".format(self.name))
+            params = self.best_params
+            print_dict(self.best_score)
         else:
-            params_fact = self.params["fact"]
-            params_bias = self.params["bias"]
-        self.clf_bias = self.clf_func(**params_fact)
-        self.clf_fact = self.clf_func(**params_bias)
+            print("Building {} models with parameters given in constructor.".format(self.name))
+            params = self.params
+        print_dict(params)
+        self.clf = {}
+        for type in self.model_types:
+            param = params[type]
+            print(param)
+            print(self.params)
+            self.clf[type] = self.clf_func(**param)
 
     def fit(self):
+        print("\n----------- Fitting Models -----------")
         print("Fitting Bias Model to ", self.data.X_train.shape[0], "test points with ", self.data.X_train.shape[1], "features.")  
-        self.clf_bias.fit(self.data.X_train, self.data.y_train["bias"])
-        self.clf_fact.fit(self.data.X_train, self.data.y_train["fact"])
+        for type in self.model_types:
+            self.clf[type].fit(self.data.X_train, self.data.y_train[type])
 
     def predict(self):
-        y_pred_fact = self.clf_fact.predict(self.data.X_test)
-        y_pred_bias = self.clf_bias.predict(self.data.X_test)
-        acc_fact = self.evaluate(y_pred_fact, self.data.y_test["fact"])
-        acc_bias = self.evaluate(y_pred_bias, self.data.y_test["bias"])
-        print("Accuracy\n\tBias: ", acc_bias, "\nFactuality: ", acc_fact)
+        y_pred = {}
+        for type in self.model_types:
+            y_pred[type] = self.clf[type].predict(self.data.X_test)
+        return y_pred
+        
 
-    def evaluate(self, y_pred, y):
-        return metrics.accuracy_score(y, y_pred)
+    def evaluate(self):
+        y_pred = self.predict()
+        acc = {}
+        for type in self.model_types:
+            acc[type] = metrics.accuracy_score(self.data.y_test[type], y_pred[type])
+        print_dict(acc)
+        return acc
 
     def sweep_params(self):
         assert self.param_search_grid is not None, "Error, no grid specified."
-        clf_bias_search = GridSearchCV(self.clf_func(), self.param_search_grid["bias"])
-        clf_fact_search = GridSearchCV(self.clf_func(), self.param_search_grid["fact"])
+        print("\n----------- Performing Hyperparameter Grid Search -----------")
+        print_dict(self.param_search_grid, indent=2)
         X = np.vstack([self.data.X_train, self.data.X_val])
         y = {}
-        for key in self.data.y.keys():
-            y[key] = np.hstack([self.data.y_train[key], self.data.y_val[key]])
-        clf_bias_search.fit(X, y["bias"])
-        clf_fact_search.fit(X, y["fact"])
-        print("\tBias Grid Search Results.")
-        means = clf_bias_search.cv_results_['mean_test_score']
-        stds = clf_bias_search.cv_results_['std_test_score']
-        for mean, std, params in zip(means, stds, clf_bias_search.cv_results_['params']):
-            print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
-        print("\n\tFactuality Grid Search Results.")
-        means = clf_fact_search.cv_results_['mean_test_score']
-        stds = clf_fact_search.cv_results_['std_test_score']
-        for mean, std, params in zip(means, stds, clf_bias_search.cv_results_['params']):
-            print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+        clf_search = {}
+        for type in self.model_types:
+            clf_search[type] = GridSearchCV(self.clf_func(), self.param_search_grid[type])
+            y[type] = np.hstack([self.data.y_train[type], self.data.y_val[type]])
+
+        for type in self.model_types:
+            clf_search[type].fit(X, y[type])
+        self.best_clf  = {}
+        self.best_params = {}
+        self.best_score = {}
+        for type in self.model_types:
+            self.best_clf[type] = clf_search[type].best_estimator_
+            self.best_params[type] = clf_search[type].best_parameters_
+            self.best_score[type] = clf_search[type].best_score_
+        print("Best Hyperparameters and Score:")
+        print_dict(self.best_params.update(self.best_score), indent=2)
+def print_dict(dict, indent=2):
+    print(json.dumps(dict, indent=indent))
+  

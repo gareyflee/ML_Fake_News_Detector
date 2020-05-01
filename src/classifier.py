@@ -66,7 +66,7 @@ class Classifier():
         y = {}
         clf_search = {}
         for type in self.model_types:
-            clf_search[type] = GridSearchCV(self.clf_func(), self.param_search_grid[type])
+            clf_search[type] = GridSearchCV(self.clf_func(), self.param_search_grid[type], refit=True)
             y[type] = np.hstack([self.data.y_train[type], self.data.y_val[type]])
 
         for type in self.model_types:

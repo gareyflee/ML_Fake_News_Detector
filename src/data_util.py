@@ -133,12 +133,34 @@ class Data:
             rand_idxs = np.random.permutation(y['bias'].shape[0])
             return X[rand_idxs], y[rand_idxs]
             
+def plot_multiple_test_curves(data_list):
+    colors = ["r", "g", 'b', 'c', 'm', 'y', 'k']
+    for type in ["fact", "bias"]:
+        plt.figure()
+        plt.grid()
+        for i,clf_data in enumerate(data_list):
+            train_scores_mean = clf_data["train_scores_mean"]
+            train_scores_std = clf_data["train_scores_std"]
+            model_name = clf_data["name"]
+            train_sizes = clf_data["train_sizes"]
+            plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                train_scores_mean + train_scores_std, alpha=0.1, color=colors[i])
+            plt.plot(train_sizes, train_scores_mean, 'o-',
+                label=model_name, color=colors[i])
+        plt.legend(loc="best")
+        plt.show()
+        plt.close()
 
-def plot_accs(x_axis, train_acc, val_acc, plt_title="", x_title="Epochs", y_title="Accuracies", x_axis_log=False, save=False):
+
+def plot_iters(x_axis, train_acc, val_acc, train_std=None, val_std=None,\
+        plt_title="", x_title="Epochs", y_title="Accuracies", x_axis_log=False, save=False):
     assert len(x_axis) == len(train_acc) == len(val_acc), "Error, x-axis and accuracies must be same length."
     fig = plt.figure()
-    plt.plot(x_axis, train_acc, label="Training Accuracy")
-    plt.plot(x_axis, val_acc, label="Validation Accuracy")
+    plt.plot(x_axis, train_acc, color="r", label="Training Accuracy")
+    plt.plot(x_axis, val_acc, color="g", label="Validation Accuracy")
+    if train_std is not None and val_std is not None:
+        plt.fill_between(x_axis, train_acc-train_std, train_acc+train_std, alpha=0.1, color="r")
+        plt.fill_between(x_axis, val_acc-val_std, val_acc+val_std, alpha=0.1, color="g")
     plt.legend()
     plt.xlabel(x_title)
     plt.ylabel(y_title)
@@ -146,8 +168,8 @@ def plot_accs(x_axis, train_acc, val_acc, plt_title="", x_title="Epochs", y_titl
     if x_axis_log:
         plt.xscale("log")
     if save:
-        file_name = plt_title.replace(" ", "_")
-        plt.savefig(plt_title + ".png")
+        file_name = plt_title.replace(" ", "_").replace(":", "-")
+        plt.savefig("../images/" + file_name + ".png")
     else:
         plt.show()
     plt.close()

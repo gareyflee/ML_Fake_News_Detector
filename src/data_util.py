@@ -40,7 +40,7 @@ class Data:
     
        
     def read_data(self, DATA_DIR):
-        # Most of this code was taken from the original SVM paper
+        # Most of this code was taken from the original SVC paper
         data = pd.read_csv(DATA_DIR + "corpus.csv")
         self.sources = data.source_url_processed
         X = None
@@ -51,10 +51,12 @@ class Data:
                 feats = np.array(feats[feats.iloc[:, 0].isin(self.sources)])
                 feats = np.delete(feats, 0, axis=1)
                 feats = feats.astype(float)
+                print("feets: ", feats.shape, feature_file)
                 if X is None:
                     X = feats[:, :-2]
                 else:
                     X = np.hstack([X, feats[:, :-2]])
+                    print(X.shape)
             else:
                 print(feature_file + " is not of type .npy, skipping.")
         y = {}
@@ -133,27 +135,35 @@ class Data:
             rand_idxs = np.random.permutation(y['bias'].shape[0])
             return X[rand_idxs], y[rand_idxs]
             
-def plot_multiple_test_curves(data_list):
+def plot_multiple_test_curves(data_list, saveFig=True):
     colors = ["r", "g", 'b', 'c', 'm', 'y', 'k']
-    for type in ["fact", "bias"]:
+    type_labels = {"fact": "Factuality Classifier", "bias": "Bias Classifier"}
+    for type in type_labels.keys():
         plt.figure()
         plt.grid()
         for i,clf_data in enumerate(data_list):
-            train_scores_mean = clf_data["train_scores_mean"]
-            train_scores_std = clf_data["train_scores_std"]
-            model_name = clf_data["name"]
-            train_sizes = clf_data["train_sizes"]
+            print(clf_data)
+            train_scores_mean = clf_data[type]["mean"]
+            train_scores_std = clf_data[type]["std"]
+            model_name = clf_data[type]["name"]
+            train_sizes = clf_data[type]["sizes"]
             plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
                 train_scores_mean + train_scores_std, alpha=0.1, color=colors[i])
             plt.plot(train_sizes, train_scores_mean, 'o-',
                 label=model_name, color=colors[i])
+        plt.title(type_labels[type])
+        plt.xlabel("Training Size")
+        plt.ylabel("Validation Accuracy")
         plt.legend(loc="best")
-        plt.show()
+        if saveFig:
+            plt.savefig("./" + type_labels[type] + ".png")
+        else:
+            plt.show()
         plt.close()
 
 
 def plot_iters(x_axis, train_acc, val_acc, train_std=None, val_std=None,\
-        plt_title="", x_title="Epochs", y_title="Accuracies", x_axis_log=False, save=False):
+        plt_title="", x_title="Epochs", y_title="Accuracies", x_axis_log=False, save=True, file_name=""):
     assert len(x_axis) == len(train_acc) == len(val_acc), "Error, x-axis and accuracies must be same length."
     fig = plt.figure()
     plt.plot(x_axis, train_acc, color="r", label="Training Accuracy")
@@ -168,8 +178,9 @@ def plot_iters(x_axis, train_acc, val_acc, train_std=None, val_std=None,\
     if x_axis_log:
         plt.xscale("log")
     if save:
-        file_name = plt_title.replace(" ", "_").replace(":", "-")
-        plt.savefig("../images/" + file_name + ".png")
+        if file_name is None:
+            file_name = plt_title.replace(" ", "_").replace(":", "-")
+        plt.savefig("./" + file_name + ".png")
     else:
         plt.show()
     plt.close()

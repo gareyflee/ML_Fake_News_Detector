@@ -45,8 +45,8 @@ def GetFeaturesAndLabels(corpus, features, task):
     X = np.empty(data.shape[0]).reshape(-1, 1)
     for file in [f for f in os.listdir('data/features/') if '.npy' in f]:
         if file.replace('.npy', '') in features:
-            feats = pd.DataFrame(np.load('data/features/' + file))
-            feats = feats[feats.iloc[:, 0].isin(sources)].as_matrix()
+            feats = pd.DataFrame(np.load('data/features/' + file, allow_pickle=True))
+            feats = np.array(feats[feats.iloc[:, 0].isin(sources)])
             feats = np.delete(feats, 0, axis=1).astype(float)
             X = np.hstack([X, feats[:, :-2]])
     X = np.delete(X, 0, axis=1)
